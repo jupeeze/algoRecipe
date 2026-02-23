@@ -1,0 +1,74 @@
+{
+    "id": "level-02",
+    "title": "野菜炒め",
+    "description": "今度は野菜炒めに挑戦！食材を切ってから炒めましょう。\n順番が大事ですよ — 先に切ってから炒めてくださいね。",
+    "learningGoal": "「関数の合成」 — 複数のアクションを正しい順序で組み合わせる",
+    "ingredients": [
+        {
+            "id": "carrot",
+            "name": "にんじん",
+            "icon": "🥕"
+        },
+        {
+            "id": "onion",
+            "name": "たまねぎ",
+            "icon": "🧅"
+        },
+        {
+            "id": "pepper",
+            "name": "ピーマン",
+            "icon": "🫑"
+        }
+    ],
+    "availableActions": [
+        {
+            "id": "cut-action",
+            "type": "CUT",
+            "label": "切る",
+            "icon": "🔪",
+            "slotCount": 1,
+            "acceptsBowl": false
+        },
+        {
+            "id": "fry-action",
+            "type": "FRY",
+            "label": "炒める",
+            "icon": "🍳",
+            "slotCount": 1,
+            "acceptsBowl": true
+        }
+    ],
+    "recipe": {
+        "conditions": [
+            {
+                "ingredientName": "にんじん",
+                "expected": {
+                    "isCut": true,
+                    "isCooked": true,
+                    "cookMethod": "fried"
+                }
+            },
+            {
+                "ingredientName": "たまねぎ",
+                "expected": {
+                    "isCut": true,
+                    "isCooked": true,
+                    "cookMethod": "fried"
+                }
+            },
+            {
+                "ingredientName": "ピーマン",
+                "expected": {
+                    "isCut": true,
+                    "isCooked": true,
+                    "cookMethod": "fried"
+                }
+            }
+        ]
+    },
+    "hints": [
+        "まず全ての野菜を切ろう",
+        "切った後に炒めよう。順番が逆だとうまくいかないかも？",
+        "ボウルを使えば、まとめて炒められるよ！"
+    ]
+}

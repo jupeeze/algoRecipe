@@ -1,0 +1,71 @@
+{
+    "id": "level-03",
+    "title": "ボウルでまとめて！ミックスサラダ",
+    "description": "食材をボウルに入れてまとめて操作しよう！\nボウルはプログラミングの「配列」と同じ。複数のデータをまとめて処理できるよ。",
+    "learningGoal": "「配列（Array）」 — ボウルに食材をまとめて入れ、バッチ処理する",
+    "ingredients": [
+        {
+            "id": "lettuce",
+            "name": "レタス",
+            "icon": "🥬"
+        },
+        {
+            "id": "tomato",
+            "name": "トマト",
+            "icon": "🍅"
+        },
+        {
+            "id": "cucumber",
+            "name": "きゅうり",
+            "icon": "🥒"
+        }
+    ],
+    "availableActions": [
+        {
+            "id": "cut-action",
+            "type": "CUT",
+            "label": "切る",
+            "icon": "🔪",
+            "slotCount": 1,
+            "acceptsBowl": false
+        },
+        {
+            "id": "mix-action",
+            "type": "MIX",
+            "label": "混ぜる",
+            "icon": "🥣",
+            "slotCount": 0,
+            "acceptsBowl": true
+        }
+    ],
+    "recipe": {
+        "conditions": [
+            {
+                "ingredientName": "レタス",
+                "expected": {
+                    "isCut": true,
+                    "isMixed": true
+                }
+            },
+            {
+                "ingredientName": "トマト",
+                "expected": {
+                    "isCut": true,
+                    "isMixed": true
+                }
+            },
+            {
+                "ingredientName": "きゅうり",
+                "expected": {
+                    "isCut": true,
+                    "isMixed": true
+                }
+            }
+        ]
+    },
+    "hints": [
+        "まず全ての野菜を切ろう",
+        "切った野菜をボウルにドラッグして入れよう",
+        "ボウルに入れたら「混ぜる」カードを使おう — これが配列のバッチ処理だよ！"
+    ]
+}

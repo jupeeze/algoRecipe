@@ -1,0 +1,548 @@
+/* ============================================================
+   RoboChef — Board & Layout Styles
+   ============================================================ */
+
+/* ----------------------------------------------------------
+   Game Layout (3-column: Recipe | Board | Deck)
+   ---------------------------------------------------------- */
+.game-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr 240px;
+    grid-template-rows: auto 1fr;
+    gap: var(--space-lg);
+    min-height: 100vh;
+    padding: var(--space-lg);
+    background: var(--gradient-board);
+}
+
+.game-header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-md) var(--space-lg);
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+}
+
+.game-header-title {
+    font-size: var(--font-size-xl);
+    font-weight: 800;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.game-header-level {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+}
+
+.game-header-actions {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+/* ----------------------------------------------------------
+   Recipe Panel (左カラム)
+   ---------------------------------------------------------- */
+.recipe-panel {
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    padding: var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    overflow-y: auto;
+}
+
+.recipe-panel-title {
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    color: var(--color-secondary);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.recipe-panel-description {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    line-height: 1.6;
+}
+
+.recipe-condition {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    transition: all var(--transition-normal);
+}
+
+.recipe-condition.passed {
+    border-color: var(--color-success);
+    background: rgba(0, 210, 211, 0.08);
+}
+
+.recipe-condition .condition-icon {
+    font-size: var(--font-size-xl);
+}
+
+.recipe-condition .condition-check {
+    margin-left: auto;
+    font-size: var(--font-size-lg);
+}
+
+.recipe-condition .condition-text {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+}
+
+.learning-goal {
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    background: rgba(108, 92, 231, 0.1);
+    border: 1px solid rgba(108, 92, 231, 0.3);
+    font-size: var(--font-size-sm);
+    color: var(--color-accent-light);
+    line-height: 1.6;
+}
+
+.learning-goal-label {
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-accent);
+    margin-bottom: var(--space-xs);
+}
+
+/* ----------------------------------------------------------
+   Cooking Board (中央カラム)
+   ---------------------------------------------------------- */
+.cooking-board {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+
+/* Command Queue Area */
+.command-queue {
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    padding: var(--space-lg);
+    min-height: 200px;
+    flex: 1;
+}
+
+.command-queue-title {
+    font-size: var(--font-size-base);
+    font-weight: 700;
+    color: var(--color-text);
+    margin-bottom: var(--space-md);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.command-queue-title .queue-icon {
+    color: var(--color-accent);
+}
+
+.command-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.command-list-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-md);
+    padding: var(--space-2xl);
+    color: var(--color-text-dim);
+    font-size: var(--font-size-sm);
+    text-align: center;
+}
+
+.command-list-empty .empty-icon {
+    font-size: 3rem;
+    opacity: 0.4;
+}
+
+/* Command Item (Action Card + Slotted Ingredients) */
+.command-item {
+    display: flex;
+    align-items: stretch;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid transparent;
+    transition: all var(--transition-normal);
+}
+
+.command-item:hover {
+    border-color: var(--color-border);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.command-item .command-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-full);
+    background: var(--gradient-accent);
+    color: var(--color-bg);
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    flex-shrink: 0;
+    align-self: center;
+}
+
+.command-item .command-remove {
+    align-self: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-full);
+    border: none;
+    background: rgba(255, 107, 107, 0.1);
+    color: var(--color-error);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-lg);
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.command-item .command-remove:hover {
+    background: rgba(255, 107, 107, 0.3);
+    transform: scale(1.1);
+}
+
+/* ----------------------------------------------------------
+   Bowl Area (ボウル = 配列)
+   ---------------------------------------------------------- */
+.bowl-area {
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    padding: var(--space-lg);
+}
+
+.bowl-area-title {
+    font-size: var(--font-size-base);
+    font-weight: 700;
+    color: var(--color-text);
+    margin-bottom: var(--space-md);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.bowl-dropzone {
+    min-height: 80px;
+    border: 2px dashed var(--color-text-dim);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-bowl);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-normal);
+}
+
+.bowl-dropzone.drag-over {
+    border-color: var(--color-accent);
+    background: var(--color-bg-bowl-active);
+    box-shadow: inset 0 0 20px rgba(72, 219, 251, 0.1);
+}
+
+.bowl-dropzone.has-items {
+    border-style: solid;
+    justify-content: flex-start;
+}
+
+.bowl-dropzone .bowl-placeholder {
+    color: var(--color-text-dim);
+    font-size: var(--font-size-sm);
+    text-align: center;
+}
+
+.bowl-label {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-dim);
+    font-family: var(--font-family-mono);
+    margin-top: var(--space-xs);
+}
+
+/* ----------------------------------------------------------
+   Card Deck (右カラム — 手持ちカード)
+   ---------------------------------------------------------- */
+.card-deck {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+
+.card-deck-section {
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    padding: var(--space-lg);
+}
+
+.card-deck-section-title {
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-text-dim);
+    margin-bottom: var(--space-md);
+}
+
+.ingredient-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.action-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+/* ----------------------------------------------------------
+   Execute Button
+   ---------------------------------------------------------- */
+.execute-button-container {
+    display: flex;
+    justify-content: center;
+    padding: var(--space-md) 0;
+}
+
+.execute-button {
+    padding: var(--space-md) var(--space-2xl);
+    border: none;
+    border-radius: var(--radius-xl);
+    background: var(--gradient-primary);
+    color: white;
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    font-family: var(--font-family);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    box-shadow: var(--shadow-md), var(--shadow-glow-primary);
+    letter-spacing: 0.05em;
+}
+
+.execute-button:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: var(--shadow-lg), 0 0 30px rgba(255, 107, 107, 0.4);
+}
+
+.execute-button:active {
+    transform: translateY(0) scale(0.98);
+}
+
+.execute-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: var(--shadow-sm);
+}
+
+/* Reset Button */
+.reset-button {
+    padding: var(--space-sm) var(--space-lg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+    font-family: var(--font-family);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.reset-button:hover {
+    border-color: var(--color-text-muted);
+    color: var(--color-text);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* ----------------------------------------------------------
+   Result Overlay
+   ---------------------------------------------------------- */
+.result-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+}
+
+.result-card {
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-xl);
+    padding: var(--space-2xl);
+    text-align: center;
+    max-width: 480px;
+    width: 90%;
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-lg);
+}
+
+.result-card.success {
+    border-color: var(--color-success);
+    box-shadow: var(--shadow-lg), var(--shadow-glow-success);
+}
+
+.result-card.failure {
+    border-color: var(--color-error);
+    box-shadow: var(--shadow-lg), var(--shadow-glow-primary);
+}
+
+.result-icon {
+    font-size: 4rem;
+    margin-bottom: var(--space-md);
+}
+
+.result-title {
+    font-size: var(--font-size-2xl);
+    font-weight: 800;
+    margin-bottom: var(--space-sm);
+}
+
+.result-card.success .result-title {
+    background: var(--gradient-success);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.result-card.failure .result-title {
+    color: var(--color-error);
+}
+
+.result-message {
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-lg);
+    line-height: 1.6;
+}
+
+.result-score {
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    color: var(--color-text);
+    margin-bottom: var(--space-lg);
+}
+
+.result-actions {
+    display: flex;
+    gap: var(--space-md);
+    justify-content: center;
+}
+
+.result-button {
+    padding: var(--space-sm) var(--space-xl);
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    font-family: var(--font-family);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.result-button-primary {
+    background: var(--gradient-accent);
+    color: var(--color-bg);
+}
+
+.result-button-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-glow-accent);
+}
+
+.result-button-secondary {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+}
+
+.result-button-secondary:hover {
+    border-color: var(--color-text-muted);
+    color: var(--color-text);
+}
+
+/* ----------------------------------------------------------
+   Timeline Viewer
+   ---------------------------------------------------------- */
+.timeline-viewer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    padding: var(--space-lg);
+}
+
+.timeline-step {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    opacity: 0.4;
+    transition: all var(--transition-normal);
+}
+
+.timeline-step.active {
+    opacity: 1;
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-glow-accent);
+}
+
+.timeline-step.completed {
+    opacity: 0.8;
+    border-color: var(--color-success);
+}
+
+.timeline-step.error {
+    border-color: var(--color-error);
+    opacity: 1;
+}
+
+/* ----------------------------------------------------------
+   Responsive (Tablet ≥ 768px, Desktop ≥ 1024px)
+   ---------------------------------------------------------- */
+@media (max-width: 1024px) {
+    .game-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto auto;
+    }
+
+    .recipe-panel {
+        order: -1;
+    }
+}
