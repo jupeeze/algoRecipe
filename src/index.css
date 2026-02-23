@@ -1,93 +1,108 @@
 /* ============================================================
    RoboChef — Design System
+   ミニマルレイアウト × パステルカラー × コード表示要素
    ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap');
 
 /* ----------------------------------------------------------
    CSS Variables (Design Tokens)
    ---------------------------------------------------------- */
 :root {
-  /* Colors — Warm Kitchen Palette */
-  --color-bg: #1a1420;
-  --color-bg-surface: #241e2e;
-  --color-bg-card: #2e2840;
-  --color-bg-card-hover: #3a3350;
-  --color-bg-slot: #1e182a;
-  --color-bg-slot-active: #3d2f5a;
-  --color-bg-bowl: #2a2040;
-  --color-bg-bowl-active: #3a2f5a;
+  /* Colors — Pastel Kawaii Palette on Light Base */
+  --color-bg: #fafafa;
+  --color-bg-surface: #ffffff;
+  --color-bg-card: #ffffff;
+  --color-bg-card-hover: #f8f6ff;
 
-  --color-primary: #ff6b6b;
-  --color-primary-light: #ff8e8e;
-  --color-primary-dark: #cc4444;
+  /* Pastel accents */
+  --color-lavender: #e8dff5;
+  --color-lavender-deep: #c4b5de;
+  --color-mint: #d4f5e9;
+  --color-mint-deep: #9ae0c4;
+  --color-cream: #fef9ef;
+  --color-pink: #fce4ec;
+  --color-pink-deep: #f8a4b8;
+  --color-blue: #e3f2fd;
+  --color-blue-deep: #90caf9;
+  --color-peach: #ffecd2;
+  --color-peach-deep: #f8b500;
 
-  --color-secondary: #feca57;
-  --color-secondary-light: #ffd580;
-  --color-secondary-dark: #e6a800;
+  /* Functional colors */
+  --color-primary: #9c7cf4;
+  --color-primary-light: #c4b5de;
+  --color-primary-dark: #7c5cbf;
 
-  --color-accent: #48dbfb;
-  --color-accent-light: #7ae7ff;
-  --color-accent-dark: #0abde3;
+  --color-success: #5ec69a;
+  --color-success-bg: #d4f5e9;
+  --color-error: #f06292;
+  --color-error-bg: #fce4ec;
+  --color-warning: #ffb74d;
 
-  --color-success: #00d2d3;
-  --color-success-light: #55e6e6;
-  --color-error: #ff6b6b;
-  --color-warning: #feca57;
+  /* Code editor colors (dark contrast) */
+  --color-code-bg: #1e1e2e;
+  --color-code-surface: #282840;
+  --color-code-text: #cdd6f4;
+  --color-code-keyword: #cba6f7;
+  --color-code-string: #a6e3a1;
+  --color-code-function: #89b4fa;
+  --color-code-number: #fab387;
+  --color-code-comment: #6c7086;
+  --color-code-line-nr: #45475a;
+  --color-code-cursor: #f5e0dc;
 
-  --color-text: #f0e6ff;
-  --color-text-muted: #9a8cb8;
-  --color-text-dim: #6b5e80;
+  /* Text */
+  --color-text: #2d2d3f;
+  --color-text-muted: #6b6b8a;
+  --color-text-dim: #a0a0b8;
 
-  --color-border: #3d3555;
-  --color-border-active: #6c5ce7;
+  /* Borders */
+  --color-border: #e8e8f0;
+  --color-border-active: #9c7cf4;
 
   /* Gradients */
-  --gradient-primary: linear-gradient(135deg, #ff6b6b, #ee5a24);
-  --gradient-secondary: linear-gradient(135deg, #feca57, #ff9f43);
-  --gradient-accent: linear-gradient(135deg, #48dbfb, #6c5ce7);
-  --gradient-success: linear-gradient(135deg, #00d2d3, #1dd1a1);
-  --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02));
-  --gradient-board: linear-gradient(180deg, #1a1420, #241e2e);
+  --gradient-primary: linear-gradient(135deg, #b8a4e8, #9c7cf4);
+  --gradient-pink-peach: linear-gradient(135deg, #fce4ec, #ffecd2);
+  --gradient-mint-blue: linear-gradient(135deg, #d4f5e9, #e3f2fd);
+  --gradient-lavender-pink: linear-gradient(135deg, #e8dff5, #fce4ec);
 
   /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
-  --shadow-glow-primary: 0 0 20px rgba(255, 107, 107, 0.3);
-  --shadow-glow-accent: 0 0 20px rgba(72, 219, 251, 0.3);
-  --shadow-glow-success: 0 0 20px rgba(0, 210, 211, 0.3);
-  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.1);
+  --shadow-card: 0 1px 4px rgba(0, 0, 0, 0.06);
+  --shadow-pastel: 0 2px 12px rgba(156, 124, 244, 0.1);
 
   /* Typography */
   --font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
   --font-family-mono: 'JetBrains Mono', 'Fira Code', monospace;
-  --font-size-xs: 0.75rem;
-  --font-size-sm: 0.875rem;
-  --font-size-base: 1rem;
-  --font-size-lg: 1.125rem;
-  --font-size-xl: 1.5rem;
-  --font-size-2xl: 2rem;
-  --font-size-3xl: 2.5rem;
+  --font-size-xs: 0.7rem;
+  --font-size-sm: 0.8125rem;
+  --font-size-base: 0.9375rem;
+  --font-size-lg: 1.0625rem;
+  --font-size-xl: 1.375rem;
+  --font-size-2xl: 1.75rem;
 
   /* Spacing */
   --space-xs: 0.25rem;
   --space-sm: 0.5rem;
-  --space-md: 1rem;
-  --space-lg: 1.5rem;
-  --space-xl: 2rem;
-  --space-2xl: 3rem;
+  --space-md: 0.875rem;
+  --space-lg: 1.25rem;
+  --space-xl: 1.75rem;
+  --space-2xl: 2.5rem;
 
   /* Radius */
   --radius-sm: 6px;
   --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
   --radius-full: 9999px;
 
   /* Transitions */
-  --transition-fast: 150ms ease;
-  --transition-normal: 250ms ease;
-  --transition-slow: 400ms ease;
-  --transition-spring: 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  --transition-fast: 120ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow: 350ms ease;
+  --transition-spring: 250ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* ----------------------------------------------------------
@@ -120,35 +135,76 @@ body {
 }
 
 /* ----------------------------------------------------------
-   Utility Classes
+   Code block styling (B: Cyberpunk element)
    ---------------------------------------------------------- */
-.glass {
-  background: var(--gradient-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.code-block {
+  background: var(--color-code-bg);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-code-text);
+  overflow-x: auto;
+  line-height: 1.7;
 }
 
-.glow-on-hover {
-  transition: box-shadow var(--transition-normal);
+.code-block .line-number {
+  color: var(--color-code-line-nr);
+  user-select: none;
+  display: inline-block;
+  width: 2em;
+  text-align: right;
+  margin-right: 1em;
 }
-.glow-on-hover:hover {
-  box-shadow: var(--shadow-glow-accent);
+
+.code-keyword {
+  color: var(--color-code-keyword);
+}
+
+.code-string {
+  color: var(--color-code-string);
+}
+
+.code-function {
+  color: var(--color-code-function);
+}
+
+.code-number {
+  color: var(--color-code-number);
+}
+
+.code-comment {
+  color: var(--color-code-comment);
+  font-style: italic;
+}
+
+.code-badge {
+  display: inline-block;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--color-code-bg);
+  color: var(--color-code-function);
+  white-space: nowrap;
 }
 
 /* ----------------------------------------------------------
-   Scrollbar
+   Scrollbar (subtle)
    ---------------------------------------------------------- */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   background: var(--color-border);
   border-radius: var(--radius-full);
 }
+
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-muted);
+  background: var(--color-text-dim);
 }

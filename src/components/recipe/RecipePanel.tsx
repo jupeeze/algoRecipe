@@ -27,6 +27,17 @@ function describeExpected(expected: Record<string, unknown>): string {
     return parts.join(' → ');
 }
 
+/** 条件をコード風に表現するヘルパー */
+function toCodeExpression(ingredientId: string, expected: Record<string, unknown>): string {
+    const parts: string[] = [];
+    if (expected.isCut) parts.push(`${ingredientId}.isCut === true`);
+    if (expected.isCooked) parts.push(`${ingredientId}.isCooked === true`);
+    if (expected.cookMethod) parts.push(`${ingredientId}.cookMethod === "${expected.cookMethod}"`);
+    if (expected.isMixed) parts.push(`${ingredientId}.isMixed === true`);
+    if (expected.seasoning) parts.push(`${ingredientId}.seasoning === "${expected.seasoning}"`);
+    return parts.join(' && ');
+}
+
 export function RecipePanel({ level, evaluationResult }: RecipePanelProps) {
     return (
         <div className="recipe-panel">
@@ -57,13 +68,19 @@ export function RecipePanel({ level, evaluationResult }: RecipePanelProps) {
                             <span className="condition-icon">
                                 {ingredientDef?.icon ?? '❓'}
                             </span>
-                            <div>
-                                <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>
                                     {condition.ingredientName}
+                                    <span style={{ fontWeight: 400, color: 'var(--color-text-muted)', marginLeft: '4px', fontSize: '0.75rem' }}>
+                                        {describeExpected(condition.expected as Record<string, unknown>)}
+                                    </span>
                                 </div>
-                                <div className="condition-text">
-                                    {describeExpected(condition.expected as Record<string, unknown>)}
-                                </div>
+                                <code className="condition-code">
+                                    {toCodeExpression(
+                                        ingredientDef?.id ?? condition.ingredientName,
+                                        condition.expected as Record<string, unknown>,
+                                    )}
+                                </code>
                             </div>
                             <span className="condition-check">
                                 {isPassed ? '✅' : '⬜'}

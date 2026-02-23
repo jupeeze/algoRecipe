@@ -3,7 +3,7 @@
 // ============================================================
 // ゲームのメインエリア。コマンドキューの構築・ボウル操作・実行を行う。
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
     DndContext,
     DragOverlay,
@@ -75,11 +75,15 @@ export function CookingBoard() {
         useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
     );
 
-    // Load initial level
-    if (!levelData) {
-        loadLevel(levels[0]);
-        return null;
-    }
+    // Load initial level via useEffect (not during render)
+    useEffect(() => {
+        if (!levelData) {
+            loadLevel(levels[0]);
+        }
+    }, [levelData, loadLevel]);
+
+    // Null guard (while loading)
+    if (!levelData) return null;
 
     const handleDragStart = (event: DragStartEvent) => {
         const { active } = event;
@@ -174,6 +178,7 @@ export function CookingBoard() {
                 <header className="game-header">
                     <div>
                         <h1 className="game-header-title">🤖 RoboChef</h1>
+                        <span className="game-header-subtitle">Learn to code, one recipe at a time!</span>
                         <span className="game-header-level">
                             Level {currentLevelIndex + 1}: {levelData.title}
                         </span>
@@ -223,17 +228,9 @@ export function CookingBoard() {
                                 <div className="action-card-header">
                                     <span className="action-icon">{action.icon}</span>
                                     <span className="action-label">{action.label}</span>
-                                    {action.acceptsBowl && (
-                                        <span
-                                            style={{
-                                                fontSize: 'var(--font-size-xs)',
-                                                color: 'var(--color-text-dim)',
-                                                marginLeft: 'auto',
-                                            }}
-                                        >
-                                            🥣 ボウル対応
-                                        </span>
-                                    )}
+                                    <span className="action-signature">
+                                        {action.type.toLowerCase()}({action.acceptsBowl ? 'bowl' : 'ingredient'})
+                                    </span>
                                 </div>
                                 <div className="action-card-slots">
                                     {Array.from({ length: action.slotCount }, (_, i) => {
@@ -269,9 +266,8 @@ export function CookingBoard() {
                                     className="execute-button"
                                     style={{
                                         marginTop: 'var(--space-sm)',
-                                        padding: '8px 16px',
+                                        padding: '6px 14px',
                                         fontSize: 'var(--font-size-sm)',
-                                        background: 'var(--gradient-accent)',
                                     }}
                                     onClick={() => handleAddCommand(action)}
                                     disabled={phase !== 'building'}
@@ -307,26 +303,17 @@ export function CookingBoard() {
                         ) : (
                             <div className="command-list">
                                 {commandQueue.map((cmd, index) => {
-                                    const action = levelData.availableActions.find(
-                                        (a) => a.type === cmd.actionType,
-                                    );
+                                    const args = cmd.useBowl
+                                        ? 'bowl'
+                                        : cmd.targetIds
+                                            .map((id) => ingredients.find((i) => i.id === id)?.name ?? id)
+                                            .join(', ');
                                     return (
                                         <div key={index} className="command-item">
                                             <span className="command-number">{index + 1}</span>
-                                            <span style={{ fontSize: '1.5rem' }}>
-                                                {action?.icon ?? '❓'}
-                                            </span>
-                                            <span style={{ fontWeight: 600 }}>
-                                                {action?.label ?? cmd.actionType}
-                                            </span>
-                                            <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
-                                                (
-                                                {cmd.useBowl
-                                                    ? 'ボウル全体'
-                                                    : cmd.targetIds
-                                                        .map((id) => ingredients.find((i) => i.id === id)?.icon ?? id)
-                                                        .join(', ')}
-                                                )
+                                            <span className="command-code">
+                                                <span className="cmd-fn">{cmd.actionType.toLowerCase()}</span>
+                                                (<span className="cmd-arg">{args}</span>)
                                             </span>
                                             <button
                                                 className="command-remove"

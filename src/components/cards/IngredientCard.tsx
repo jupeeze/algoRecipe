@@ -37,6 +37,11 @@ export function IngredientCard({ ingredient, compact }: IngredientCardProps) {
             <span className="card-icon">{ingredient.icon}</span>
             {!compact && <span className="card-name">{ingredient.name}</span>}
             {!compact && (
+                <span className="card-code">
+                    let {ingredient.id}
+                </span>
+            )}
+            {!compact && (
                 <div className="card-status">
                     {ingredient.isCut && (
                         <span className="status-badge active">✂️ 切った</span>
