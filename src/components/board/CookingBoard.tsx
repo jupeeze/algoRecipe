@@ -17,7 +17,6 @@ import {
 } from '@dnd-kit/core';
 import { useGameStore } from '../../stores/gameStore';
 import { IngredientCard } from '../cards/IngredientCard';
-import { CardSlot } from '../cards/CardSlot';
 import { RecipePanel } from '../recipe/RecipePanel';
 import { ResultOverlay } from './ResultOverlay';
 import { validateCommand } from '../../engine/executor';
@@ -38,13 +37,6 @@ const levels: LevelData[] = [
     level02 as unknown as LevelData,
     level03 as unknown as LevelData,
 ];
-
-// ----------------------------------------------------------
-// Command Builder State (local UI state)
-// ----------------------------------------------------------
-interface CommandSlots {
-    [slotId: string]: IngredientState | undefined;
-}
 
 // パラメータ選択の状態
 interface ParamSelections {
@@ -79,14 +71,15 @@ export function CookingBoard() {
     const [activeIngredient, setActiveIngredient] =
         useState<IngredientState | null>(null);
 
-    // 各アクションカードのスロットの中身（ビルドフェーズ用のローカル状態）
-    const [slots, setSlots] = useState<CommandSlots>({});
-
     // パラメータ選択
     const [paramSelections, setParamSelections] = useState<ParamSelections>({});
 
     // Level index
     const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
+
+    // Code input mode
+    const [isCodeMode, setIsCodeMode] = useState(false);
+    const [codeInput, setCodeInput] = useState('');
 
     // dnd-kit sensors
     const sensors = useSensors(
@@ -104,7 +97,6 @@ export function CookingBoard() {
     // Real-time validation of command queue
     const validationResults = useMemo(() => {
         if (!levelData || phase !== 'building') return [];
-        // Simulate state after each command to validate progressively
         let simulatedIngredients = levelData.ingredients.map((def) => ({
             id: def.id,
             name: def.name,
@@ -117,7 +109,6 @@ export function CookingBoard() {
 
         return commandQueue.map((cmd) => {
             const result = validateCommand(cmd, simulatedIngredients, bowl);
-            // Simulate the command effect for next validation
             if (cmd.actionType === 'CUT') {
                 simulatedIngredients = simulatedIngredients.map((ing) =>
                     cmd.targetIds.includes(ing.id) ? { ...ing, isCut: true } : ing,
@@ -144,43 +135,16 @@ export function CookingBoard() {
 
     const handleDragEnd = useCallback((event: DragEndEvent) => {
         const { over } = event;
+        const draggedIngredient = activeIngredient;
         setActiveIngredient(null);
 
-        if (!over || !activeIngredient) return;
+        if (!over || !draggedIngredient) return;
 
         const overData = over.data.current;
 
-        if (overData?.type === 'slot') {
-            // スロットに食材をドロップ
-            setSlots((prev) => ({
-                ...prev,
-                [overData.slotId]: activeIngredient,
-            }));
-        } else if (overData?.type === 'bowl') {
-            // ボウルに食材をドロップ
-            addToBowl(activeIngredient.id);
-        }
-    }, [activeIngredient, addToBowl]);
-
-    const handleAddCommand = useCallback(
-        (action: ActionDefinition) => {
-            // スロットに入っている食材を集める
-            const slotIngredients: IngredientState[] = [];
-            for (let i = 0; i < action.slotCount; i++) {
-                const slotId = `${action.id}-slot-${i}`;
-                const ing = slots[slotId];
-                if (ing) {
-                    slotIngredients.push(ing);
-                }
-            }
-
-            if (slotIngredients.length === 0 && !action.acceptsBowl) {
-                return; // 食材がセットされていない
-            }
-
-            const useBowl = action.acceptsBowl && slotIngredients.length === 0 && bowl.ingredientIds.length > 0;
-
-            // パラメータを取得
+        if (overData?.type === 'action') {
+            // ドロップ先がアクションカード → 即座にコマンド追加
+            const action = overData.action as ActionDefinition;
             const params: Record<string, string> = {};
             if (action.paramSlots) {
                 const selections = paramSelections[action.id] ?? {};
@@ -190,30 +154,91 @@ export function CookingBoard() {
                     }
                 }
             }
-
             addCommand({
                 actionType: action.type as ActionType,
-                targetIds: useBowl ? [] : slotIngredients.map((i) => i.id),
-                useBowl,
+                targetIds: [draggedIngredient.id],
+                useBowl: false,
                 ...(Object.keys(params).length > 0 ? { params } : {}),
             });
+        } else if (overData?.type === 'bowl') {
+            // ボウルに食材をドロップ
+            addToBowl(draggedIngredient.id);
+        }
+    }, [activeIngredient, addToBowl, addCommand, paramSelections]);
 
-            // スロットをクリア
-            const newSlots = { ...slots };
-            for (let i = 0; i < action.slotCount; i++) {
-                delete newSlots[`${action.id}-slot-${i}`];
+    // コード入力からコマンドをパースして追加
+    const handleCodeSubmit = useCallback(() => {
+        if (!levelData) return;
+
+        const lines = codeInput
+            .split('\n')
+            .map((l) => l.trim())
+            .filter((l) => l.length > 0 && !l.startsWith('//'));
+
+        const actionMap: Record<string, ActionType> = {
+            cut: 'CUT', boil: 'BOIL', fry: 'FRY',
+            steam: 'STEAM', mix: 'MIX', season: 'SEASON',
+        };
+
+        for (const line of lines) {
+            // パース: action(arg1, arg2, ...) or action(arg, "param")
+            const match = line.match(/^(\w+)\((.+)\)$/);
+            if (!match) continue;
+
+            const [, fnName, argsStr] = match;
+            const actionType = actionMap[fnName.toLowerCase()];
+            if (!actionType) continue;
+
+            // 引数をパース
+            const args = argsStr.split(',').map((a) => a.trim().replace(/"/g, ''));
+
+            if (actionType === 'MIX') {
+                // MIX: mix(bowl) or mix(carrot, tomato)
+                const useBowl = args.length === 1 && args[0] === 'bowl';
+                const targetIds = useBowl ? [] : args.map((a) => {
+                    const ing = levelData.ingredients.find(
+                        (i) => i.name === a || i.id === a,
+                    );
+                    return ing?.id ?? a;
+                });
+                addCommand({ actionType, targetIds, useBowl });
+            } else if (actionType === 'SEASON') {
+                // SEASON: season(carrot, "ドレッシング")
+                const ingArg = args[0];
+                const seasoning = args[1];
+                const ing = levelData.ingredients.find(
+                    (i) => i.name === ingArg || i.id === ingArg,
+                );
+                addCommand({
+                    actionType,
+                    targetIds: [ing?.id ?? ingArg],
+                    useBowl: ingArg === 'bowl',
+                    ...(seasoning ? { params: { seasoning } } : {}),
+                });
+            } else {
+                // 通常: action(ingredient)
+                for (const a of args) {
+                    const useBowl = a === 'bowl';
+                    const ing = levelData.ingredients.find(
+                        (i) => i.name === a || i.id === a,
+                    );
+                    addCommand({
+                        actionType,
+                        targetIds: useBowl ? [] : [ing?.id ?? a],
+                        useBowl,
+                    });
+                }
             }
-            setSlots(newSlots);
-        },
-        [slots, bowl, addCommand, paramSelections],
-    );
+        }
+        setCodeInput('');
+    }, [codeInput, levelData, addCommand]);
 
     // Null guard (while loading)
     if (!levelData) return null;
 
     const handleReset = () => {
-        setSlots({});
         setParamSelections({});
+        setCodeInput('');
         reset();
     };
 
@@ -221,24 +246,48 @@ export function CookingBoard() {
         const nextIndex = currentLevelIndex + 1;
         if (nextIndex < levels.length) {
             setCurrentLevelIndex(nextIndex);
-            setSlots({});
             setParamSelections({});
+            setCodeInput('');
             loadLevel(levels[nextIndex]);
         }
     };
 
     const handleSelectLevel = (index: number) => {
         setCurrentLevelIndex(index);
-        setSlots({});
         setParamSelections({});
+        setCodeInput('');
         loadLevel(levels[index]);
     };
 
-    // レベルごとのスター表示ヘルパー
     const getLevelStars = (levelId: string) => {
         const s = stars[levelId] ?? 0;
         return '⭐'.repeat(s) + '☆'.repeat(3 - s);
     };
+
+    // ボウル全体にアクションを適用するハンドラ
+    const handleBowlAction = (action: ActionDefinition) => {
+        if (bowl.ingredientIds.length === 0) return;
+        const params: Record<string, string> = {};
+        if (action.paramSlots) {
+            const selections = paramSelections[action.id] ?? {};
+            for (const slot of action.paramSlots) {
+                if (selections[slot.name]) {
+                    params[slot.name] = selections[slot.name];
+                }
+            }
+        }
+        addCommand({
+            actionType: action.type as ActionType,
+            targetIds: [],
+            useBowl: true,
+            ...(Object.keys(params).length > 0 ? { params } : {}),
+        });
+    };
+
+    // コードプレースホルダー生成
+    const codePlaceholder = levelData.ingredients
+        .map((i) => `${levelData.availableActions[0]?.type.toLowerCase() ?? 'cut'}(${i.name})`)
+        .join('\n');
 
     return (
         <DndContext
@@ -257,7 +306,6 @@ export function CookingBoard() {
                         </span>
                     </div>
                     <div className="game-header-actions">
-                        {/* Level selector */}
                         <select
                             value={currentLevelIndex}
                             onChange={(e) => handleSelectLevel(Number(e.target.value))}
@@ -277,6 +325,14 @@ export function CookingBoard() {
                                 </option>
                             ))}
                         </select>
+                        {/* Code mode toggle */}
+                        <button
+                            className={`mode-toggle-button ${isCodeMode ? 'active' : ''}`}
+                            onClick={() => setIsCodeMode(!isCodeMode)}
+                            title={isCodeMode ? 'ビジュアルモードへ' : 'コード入力モードへ'}
+                        >
+                            {isCodeMode ? '🎨 ビジュアル' : '💻 コード'}
+                        </button>
                         <button className="reset-button" onClick={handleReset}>
                             🔄 リセット
                         </button>
@@ -288,106 +344,55 @@ export function CookingBoard() {
 
                 {/* Center: Cooking Board */}
                 <div className="cooking-board">
-                    {/* Action Cards (with slots) */}
-                    <div
-                        style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 'var(--space-md)',
-                        }}
-                    >
-                        {levelData.availableActions.map((action) => (
-                            <div key={action.id} className="action-card card">
-                                <div className="action-card-header">
-                                    <span className="action-icon">{action.icon}</span>
-                                    <span className="action-label">{action.label}</span>
-                                    <span className="action-signature">
-                                        {action.type.toLowerCase()}({action.acceptsBowl ? 'bowl' : 'ingredient'})
-                                    </span>
-                                </div>
-                                <div className="action-card-slots">
-                                    {Array.from({ length: action.slotCount }, (_, i) => {
-                                        const slotId = `${action.id}-slot-${i}`;
-                                        return (
-                                            <CardSlot
-                                                key={slotId}
-                                                slotId={slotId}
-                                                ingredient={slots[slotId]}
-                                                onRemove={() =>
-                                                    setSlots((prev) => {
-                                                        const next = { ...prev };
-                                                        delete next[slotId];
-                                                        return next;
-                                                    })
-                                                }
-                                            />
-                                        );
-                                    })}
-                                    {action.acceptsBowl && action.slotCount === 0 && (
-                                        <div
-                                            style={{
-                                                fontSize: 'var(--font-size-sm)',
-                                                color: 'var(--color-text-dim)',
-                                                padding: 'var(--space-sm)',
-                                            }}
-                                        >
-                                            ボウルの中身をまとめて処理
-                                        </div>
-                                    )}
-                                </div>
-                                {/* Parameter selectors (for SEASON etc.) */}
-                                {action.paramSlots && action.paramSlots.length > 0 && (
-                                    <div className="action-card-params">
-                                        {action.paramSlots.map((param) => (
-                                            <div key={param.name} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', marginTop: 'var(--space-sm)' }}>
-                                                <label style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                                                    {param.label}:
-                                                </label>
-                                                <select
-                                                    value={paramSelections[action.id]?.[param.name] ?? ''}
-                                                    onChange={(e) =>
-                                                        setParamSelections((prev) => ({
-                                                            ...prev,
-                                                            [action.id]: {
-                                                                ...prev[action.id],
-                                                                [param.name]: e.target.value,
-                                                            },
-                                                        }))
-                                                    }
-                                                    style={{
-                                                        background: 'var(--color-bg)',
-                                                        color: 'var(--color-text)',
-                                                        border: '1px solid var(--color-border)',
-                                                        borderRadius: 'var(--radius-sm)',
-                                                        padding: '3px 8px',
-                                                        fontSize: 'var(--font-size-xs)',
-                                                        fontFamily: 'var(--font-family)',
-                                                    }}
-                                                >
-                                                    <option value="">選択...</option>
-                                                    {param.options.map((opt) => (
-                                                        <option key={opt} value={opt}>{opt}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                                <button
-                                    className="execute-button"
-                                    style={{
-                                        marginTop: 'var(--space-sm)',
-                                        padding: '6px 14px',
-                                        fontSize: 'var(--font-size-sm)',
-                                    }}
-                                    onClick={() => handleAddCommand(action)}
-                                    disabled={phase !== 'building'}
-                                >
-                                    ＋ キューに追加
-                                </button>
+
+                    {isCodeMode ? (
+                        /* ============ Code Input Mode ============ */
+                        <div className="code-input-area">
+                            <h3 style={{ fontFamily: 'var(--font-family-mono)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-sm)' }}>
+                                💻 コードを入力してコマンドを追加
+                            </h3>
+                            <div className="code-input-help">
+                                使える関数: {levelData.availableActions.map((a) => (
+                                    <code key={a.id}>{a.type.toLowerCase()}()</code>
+                                ))}
+                                <br />
+                                引数には食材名を使おう: {levelData.ingredients.map((i) => (
+                                    <code key={i.id}>{i.name}</code>
+                                ))}
                             </div>
-                        ))}
-                    </div>
+                            <textarea
+                                className="code-textarea"
+                                value={codeInput}
+                                onChange={(e) => setCodeInput(e.target.value)}
+                                placeholder={codePlaceholder}
+                                rows={6}
+                                spellCheck={false}
+                            />
+                            <button
+                                className="execute-button"
+                                onClick={handleCodeSubmit}
+                                disabled={!codeInput.trim() || phase !== 'building'}
+                                style={{ marginTop: 'var(--space-sm)' }}
+                            >
+                                ＋ コードからキューに追加
+                            </button>
+                        </div>
+                    ) : (
+                        /* ============ Visual Mode — Action Cards as Drop Zones ============ */
+                        <div className="action-cards-area">
+                            {levelData.availableActions.map((action) => (
+                                <ActionDropZone
+                                    key={action.id}
+                                    action={action}
+                                    phase={phase}
+                                    paramSelections={paramSelections}
+                                    setParamSelections={setParamSelections}
+                                    onBowlAction={() => handleBowlAction(action)}
+                                    hasBowlItems={bowl.ingredientIds.length > 0}
+                                />
+                            ))}
+                        </div>
+                    )}
 
                     {/* Bowl Area */}
                     <BowlArea
@@ -416,9 +421,9 @@ export function CookingBoard() {
                             <div className="command-list-empty">
                                 <span className="empty-icon">📝</span>
                                 <span>
-                                    アクションカードに食材をセットして
-                                    <br />
-                                    「キューに追加」してね
+                                    {isCodeMode
+                                        ? 'コードを入力してキューに追加しよう'
+                                        : '食材をまな板にドラッグ＆ドロップ！'}
                                 </span>
                             </div>
                         ) : (
@@ -442,7 +447,6 @@ export function CookingBoard() {
                                                 <span className="cmd-fn">{cmd.actionType.toLowerCase()}</span>
                                                 (<span className="cmd-arg">{args}{paramStr}</span>)
                                             </span>
-                                            {/* Validation warnings */}
                                             {validation && validation.warnings.length > 0 && phase === 'building' && (
                                                 <span className="command-warning" title={validation.warnings.join('\n')}>
                                                     ⚠️
@@ -525,7 +529,6 @@ export function CookingBoard() {
                                         background: 'var(--color-bg-surface)',
                                         color: 'var(--color-primary)',
                                         border: '2px solid var(--color-primary)',
-                                        marginLeft: 'var(--space-md)',
                                     }}
                                 >
                                     ▶▶ ステップ実行
@@ -535,10 +538,13 @@ export function CookingBoard() {
                     </div>
                 </div>
 
-                {/* Right: Card Deck */}
-                <div className="card-deck">
+                {/* Right: Card Deck (冷蔵庫) */}
+                <div className="card-deck fridge">
+                    <div className="fridge-door">
+                        <div className="fridge-handle" />
+                    </div>
                     <div className="card-deck-section">
-                        <h3 className="card-deck-section-title">🥕 食材カード</h3>
+                        <h3 className="card-deck-section-title">🧊 れいぞうこ</h3>
                         <div className="ingredient-list">
                             {ingredients.map((ing) => (
                                 <IngredientCard key={ing.id} ingredient={ing} />
@@ -570,6 +576,106 @@ export function CookingBoard() {
                 }
             />
         </DndContext>
+    );
+}
+
+// ----------------------------------------------------------
+// Action Card Drop Zone (まな板スタイル)
+// ----------------------------------------------------------
+function ActionDropZone({
+    action,
+    phase,
+    paramSelections,
+    setParamSelections,
+    onBowlAction,
+    hasBowlItems,
+}: {
+    action: ActionDefinition;
+    phase: string;
+    paramSelections: ParamSelections;
+    setParamSelections: React.Dispatch<React.SetStateAction<ParamSelections>>;
+    onBowlAction: () => void;
+    hasBowlItems: boolean;
+}) {
+    const { isOver, setNodeRef } = useDroppable({
+        id: `action-drop-${action.id}`,
+        data: { type: 'action', action },
+    });
+
+    // アクションタイプごとの背景テーマ
+    const themeClass = action.type === 'CUT' ? 'cutting-board'
+        : action.type === 'FRY' ? 'frying-pan'
+            : action.type === 'BOIL' ? 'pot'
+                : action.type === 'MIX' ? 'mixing-bowl'
+                    : action.type === 'SEASON' ? 'spice-rack'
+                        : '';
+
+    return (
+        <div
+            ref={setNodeRef}
+            className={`action-dropzone ${themeClass} ${isOver ? 'drag-over' : ''} ${phase !== 'building' ? 'disabled' : ''}`}
+        >
+            <div className="action-dropzone-header">
+                <span className="action-icon">{action.icon}</span>
+                <span className="action-label">{action.label}</span>
+                <code className="action-signature">
+                    {action.type.toLowerCase()}()
+                </code>
+            </div>
+            <div className="action-dropzone-body">
+                <span className="dropzone-hint">
+                    {isOver ? '✨ ここでドロップ！' : '🫳 食材をここにドラッグ'}
+                </span>
+            </div>
+            {/* Parameter selectors (for SEASON etc.) */}
+            {action.paramSlots && action.paramSlots.length > 0 && (
+                <div className="action-card-params">
+                    {action.paramSlots.map((param) => (
+                        <div key={param.name} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', marginTop: 'var(--space-xs)' }}>
+                            <label style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                                {param.label}:
+                            </label>
+                            <select
+                                value={paramSelections[action.id]?.[param.name] ?? ''}
+                                onChange={(e) =>
+                                    setParamSelections((prev) => ({
+                                        ...prev,
+                                        [action.id]: {
+                                            ...prev[action.id],
+                                            [param.name]: e.target.value,
+                                        },
+                                    }))
+                                }
+                                style={{
+                                    background: 'var(--color-bg)',
+                                    color: 'var(--color-text)',
+                                    border: '1px solid var(--color-border)',
+                                    borderRadius: 'var(--radius-sm)',
+                                    padding: '3px 8px',
+                                    fontSize: 'var(--font-size-xs)',
+                                    fontFamily: 'var(--font-family)',
+                                }}
+                            >
+                                <option value="">選択...</option>
+                                {param.options.map((opt) => (
+                                    <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                            </select>
+                        </div>
+                    ))}
+                </div>
+            )}
+            {/* Bowl action button (for acceptsBowl actions) */}
+            {action.acceptsBowl && hasBowlItems && (
+                <button
+                    className="bowl-action-button"
+                    onClick={onBowlAction}
+                    disabled={phase !== 'building'}
+                >
+                    🥣 ボウルごと{action.label}
+                </button>
+            )}
+        </div>
     );
 }
 
