@@ -25,9 +25,115 @@ const animationMap: Record<string, AnimationType> = {
     STEAM: 'steam',
     MIX: 'mix',
     SEASON: 'season',
+    CALL_RECIPE: 'cut', // CALL_RECIPE は展開後のアニメーションを使う
 };
 
 const ANIMATION_DURATION = 800; // ms
+
+// ----------------------------------------------------------
+// Command Validation (リアルタイムフィードバック用)
+// ----------------------------------------------------------
+export interface ValidationResult {
+    valid: boolean;
+    warnings: string[];
+    errors: string[];
+}
+
+/**
+ * コマンドを実行前にバリデーションする。
+ * リアルタイムでUIにフィードバックを返すために使用。
+ */
+export function validateCommand(
+    command: Command,
+    ingredients: IngredientState[],
+    bowl: BowlState,
+): ValidationResult {
+    const warnings: string[] = [];
+    const errors: string[] = [];
+
+    const targetIds = command.useBowl
+        ? bowl.ingredientIds
+        : command.targetIds;
+
+    // ターゲットチェック
+    if (command.actionType !== 'CALL_RECIPE') {
+        if (targetIds.length === 0) {
+            errors.push('対象の食材が指定されていません');
+        }
+    }
+
+    // MIX チェック
+    if (command.actionType === 'MIX' && targetIds.length < 2) {
+        errors.push('MIX には2つ以上の食材が必要です');
+    }
+
+    // CALL_RECIPE チェック
+    if (command.actionType === 'CALL_RECIPE') {
+        if (!command.subCommands || command.subCommands.length === 0) {
+            errors.push('レシピカードにコマンドが設定されていません');
+        }
+    }
+
+    // 調理順序の警告（切ってない食材を炒めようとしている等）
+    if (['FRY', 'BOIL', 'STEAM'].includes(command.actionType)) {
+        for (const id of targetIds) {
+            const ing = ingredients.find((i) => i.id === id);
+            if (ing && !ing.isCut) {
+                warnings.push(
+                    `「${ing.name}」がまだ切られていません。先に切ったほうがいいかも？`,
+                );
+            }
+            if (ing && ing.isCooked) {
+                warnings.push(
+                    `「${ing.name}」は既に加熱済みです`,
+                );
+            }
+        }
+    }
+
+    // CUT の重複チェック
+    if (command.actionType === 'CUT') {
+        for (const id of targetIds) {
+            const ing = ingredients.find((i) => i.id === id);
+            if (ing && ing.isCut) {
+                warnings.push(`「${ing.name}」は既に切られています`);
+            }
+        }
+    }
+
+    // SEASON パラメータチェック
+    if (command.actionType === 'SEASON') {
+        if (!command.params?.['seasoning']) {
+            errors.push('味付けの調味料が指定されていません');
+        }
+    }
+
+    return {
+        valid: errors.length === 0,
+        warnings,
+        errors,
+    };
+}
+
+// ----------------------------------------------------------
+// Command Flattening (CALL_RECIPE の展開)
+// ----------------------------------------------------------
+
+/**
+ * CALL_RECIPE コマンドをサブコマンドに展開する。
+ * ネストされた CALL_RECIPE も再帰的に展開する。
+ */
+export function flattenCommands(commands: Command[]): Command[] {
+    const result: Command[] = [];
+    for (const cmd of commands) {
+        if (cmd.actionType === 'CALL_RECIPE' && cmd.subCommands) {
+            result.push(...flattenCommands(cmd.subCommands));
+        } else {
+            result.push(cmd);
+        }
+    }
+    return result;
+}
 
 // ----------------------------------------------------------
 // Executor
@@ -45,11 +151,14 @@ export function executeCommands(
     commands: Command[],
     initialContext: ExecutorContext,
 ): ExecutionResult {
+    // CALL_RECIPE を展開
+    const flatCommands = flattenCommands(commands);
+
     const timeline: TimelineEvent[] = [];
-    let currentIngredients = [...initialContext.ingredients.map((i) => ({ ...i }))];
+    let currentIngredients = [...flatCommands.length > 0 ? initialContext.ingredients.map((i) => ({ ...i })) : initialContext.ingredients.map((i) => ({ ...i }))];
     let success = true;
 
-    for (const command of commands) {
+    for (const command of flatCommands) {
         const beforeState = currentIngredients.map((i) => ({ ...i }));
 
         try {

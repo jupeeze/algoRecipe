@@ -3,7 +3,7 @@
 // ============================================================
 // ゲームのメインエリア。コマンドキューの構築・ボウル操作・実行を行う。
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import {
     DndContext,
     DragOverlay,
@@ -20,16 +20,21 @@ import { IngredientCard } from '../cards/IngredientCard';
 import { CardSlot } from '../cards/CardSlot';
 import { RecipePanel } from '../recipe/RecipePanel';
 import { ResultOverlay } from './ResultOverlay';
+import { validateCommand } from '../../engine/executor';
 import type { ActionDefinition, IngredientState, ActionType } from '../../engine/types';
 
 // Available levels
 import level01 from '../../data/levels/level-01.json';
+import level0102 from '../../data/levels/level-01-02.json';
+import level0103 from '../../data/levels/level-01-03.json';
 import level02 from '../../data/levels/level-02.json';
 import level03 from '../../data/levels/level-03.json';
 import type { LevelData } from '../../engine/types';
 
 const levels: LevelData[] = [
     level01 as unknown as LevelData,
+    level0102 as unknown as LevelData,
+    level0103 as unknown as LevelData,
     level02 as unknown as LevelData,
     level03 as unknown as LevelData,
 ];
@@ -41,6 +46,11 @@ interface CommandSlots {
     [slotId: string]: IngredientState | undefined;
 }
 
+// パラメータ選択の状態
+interface ParamSelections {
+    [actionId: string]: Record<string, string>;
+}
+
 export function CookingBoard() {
     const {
         levelData,
@@ -50,12 +60,18 @@ export function CookingBoard() {
         phase,
         evaluationResult,
         isCleared,
+        isStepMode,
+        stepIndex,
+        executionResult,
+        stars,
         loadLevel,
         addCommand,
         removeCommand,
         addToBowl,
         removeFromBowl,
-        execute,
+        executeAll,
+        startStepExecution,
+        executeStep,
         reset,
     } = useGameStore();
 
@@ -65,6 +81,9 @@ export function CookingBoard() {
 
     // 各アクションカードのスロットの中身（ビルドフェーズ用のローカル状態）
     const [slots, setSlots] = useState<CommandSlots>({});
+
+    // パラメータ選択
+    const [paramSelections, setParamSelections] = useState<ParamSelections>({});
 
     // Level index
     const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
@@ -82,18 +101,48 @@ export function CookingBoard() {
         }
     }, [levelData, loadLevel]);
 
-    // Null guard (while loading)
-    if (!levelData) return null;
+    // Real-time validation of command queue
+    const validationResults = useMemo(() => {
+        if (!levelData || phase !== 'building') return [];
+        // Simulate state after each command to validate progressively
+        let simulatedIngredients = levelData.ingredients.map((def) => ({
+            id: def.id,
+            name: def.name,
+            icon: def.icon,
+            isCut: false,
+            isCooked: false,
+            isMixed: false,
+            mixedWith: [] as string[],
+        }));
 
-    const handleDragStart = (event: DragStartEvent) => {
+        return commandQueue.map((cmd) => {
+            const result = validateCommand(cmd, simulatedIngredients, bowl);
+            // Simulate the command effect for next validation
+            if (cmd.actionType === 'CUT') {
+                simulatedIngredients = simulatedIngredients.map((ing) =>
+                    cmd.targetIds.includes(ing.id) ? { ...ing, isCut: true } : ing,
+                );
+            } else if (['FRY', 'BOIL', 'STEAM'].includes(cmd.actionType)) {
+                const method = cmd.actionType === 'FRY' ? 'fried' : cmd.actionType === 'BOIL' ? 'boiled' : 'steamed';
+                simulatedIngredients = simulatedIngredients.map((ing) =>
+                    cmd.targetIds.includes(ing.id) || (cmd.useBowl && bowl.ingredientIds.includes(ing.id))
+                        ? { ...ing, isCooked: true, cookMethod: method as 'fried' | 'boiled' | 'steamed' }
+                        : ing,
+                );
+            }
+            return result;
+        });
+    }, [commandQueue, levelData, bowl, phase]);
+
+    const handleDragStart = useCallback((event: DragStartEvent) => {
         const { active } = event;
         const data = active.data.current;
         if (data?.type === 'ingredient') {
             setActiveIngredient(data.ingredient);
         }
-    };
+    }, []);
 
-    const handleDragEnd = (event: DragEndEvent) => {
+    const handleDragEnd = useCallback((event: DragEndEvent) => {
         const { over } = event;
         setActiveIngredient(null);
 
@@ -111,7 +160,7 @@ export function CookingBoard() {
             // ボウルに食材をドロップ
             addToBowl(activeIngredient.id);
         }
-    };
+    }, [activeIngredient, addToBowl]);
 
     const handleAddCommand = useCallback(
         (action: ActionDefinition) => {
@@ -131,10 +180,22 @@ export function CookingBoard() {
 
             const useBowl = action.acceptsBowl && slotIngredients.length === 0 && bowl.ingredientIds.length > 0;
 
+            // パラメータを取得
+            const params: Record<string, string> = {};
+            if (action.paramSlots) {
+                const selections = paramSelections[action.id] ?? {};
+                for (const slot of action.paramSlots) {
+                    if (selections[slot.name]) {
+                        params[slot.name] = selections[slot.name];
+                    }
+                }
+            }
+
             addCommand({
                 actionType: action.type as ActionType,
                 targetIds: useBowl ? [] : slotIngredients.map((i) => i.id),
                 useBowl,
+                ...(Object.keys(params).length > 0 ? { params } : {}),
             });
 
             // スロットをクリア
@@ -144,11 +205,15 @@ export function CookingBoard() {
             }
             setSlots(newSlots);
         },
-        [slots, bowl, addCommand],
+        [slots, bowl, addCommand, paramSelections],
     );
+
+    // Null guard (while loading)
+    if (!levelData) return null;
 
     const handleReset = () => {
         setSlots({});
+        setParamSelections({});
         reset();
     };
 
@@ -157,6 +222,7 @@ export function CookingBoard() {
         if (nextIndex < levels.length) {
             setCurrentLevelIndex(nextIndex);
             setSlots({});
+            setParamSelections({});
             loadLevel(levels[nextIndex]);
         }
     };
@@ -164,7 +230,14 @@ export function CookingBoard() {
     const handleSelectLevel = (index: number) => {
         setCurrentLevelIndex(index);
         setSlots({});
+        setParamSelections({});
         loadLevel(levels[index]);
+    };
+
+    // レベルごとのスター表示ヘルパー
+    const getLevelStars = (levelId: string) => {
+        const s = stars[levelId] ?? 0;
+        return '⭐'.repeat(s) + '☆'.repeat(3 - s);
     };
 
     return (
@@ -180,7 +253,7 @@ export function CookingBoard() {
                         <h1 className="game-header-title">🤖 RoboChef</h1>
                         <span className="game-header-subtitle">Learn to code, one recipe at a time!</span>
                         <span className="game-header-level">
-                            Level {currentLevelIndex + 1}: {levelData.title}
+                            {levelData.title}
                         </span>
                     </div>
                     <div className="game-header-actions">
@@ -200,7 +273,7 @@ export function CookingBoard() {
                         >
                             {levels.map((l, i) => (
                                 <option key={l.id} value={i}>
-                                    Level {i + 1}: {l.title}
+                                    {l.title} {getLevelStars(l.id)}
                                 </option>
                             ))}
                         </select>
@@ -262,6 +335,44 @@ export function CookingBoard() {
                                         </div>
                                     )}
                                 </div>
+                                {/* Parameter selectors (for SEASON etc.) */}
+                                {action.paramSlots && action.paramSlots.length > 0 && (
+                                    <div className="action-card-params">
+                                        {action.paramSlots.map((param) => (
+                                            <div key={param.name} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', marginTop: 'var(--space-sm)' }}>
+                                                <label style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                                                    {param.label}:
+                                                </label>
+                                                <select
+                                                    value={paramSelections[action.id]?.[param.name] ?? ''}
+                                                    onChange={(e) =>
+                                                        setParamSelections((prev) => ({
+                                                            ...prev,
+                                                            [action.id]: {
+                                                                ...prev[action.id],
+                                                                [param.name]: e.target.value,
+                                                            },
+                                                        }))
+                                                    }
+                                                    style={{
+                                                        background: 'var(--color-bg)',
+                                                        color: 'var(--color-text)',
+                                                        border: '1px solid var(--color-border)',
+                                                        borderRadius: 'var(--radius-sm)',
+                                                        padding: '3px 8px',
+                                                        fontSize: 'var(--font-size-xs)',
+                                                        fontFamily: 'var(--font-family)',
+                                                    }}
+                                                >
+                                                    <option value="">選択...</option>
+                                                    {param.options.map((opt) => (
+                                                        <option key={opt} value={opt}>{opt}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                                 <button
                                     className="execute-button"
                                     style={{
@@ -290,6 +401,16 @@ export function CookingBoard() {
                         <h3 className="command-queue-title">
                             <span className="queue-icon">⚡</span>
                             コマンドキュー ({commandQueue.length})
+                            {levelData.optimalCommandCount && phase === 'building' && (
+                                <span style={{
+                                    fontSize: 'var(--font-size-xs)',
+                                    color: 'var(--color-text-dim)',
+                                    marginLeft: 'auto',
+                                    fontWeight: 400,
+                                }}>
+                                    最適: {levelData.optimalCommandCount}コマンド
+                                </span>
+                            )}
                         </h3>
                         {commandQueue.length === 0 ? (
                             <div className="command-list-empty">
@@ -308,20 +429,39 @@ export function CookingBoard() {
                                         : cmd.targetIds
                                             .map((id) => ingredients.find((i) => i.id === id)?.name ?? id)
                                             .join(', ');
+                                    const paramStr = cmd.params
+                                        ? ', ' + Object.entries(cmd.params).map(([, v]) => `"${v}"`).join(', ')
+                                        : '';
+                                    const validation = validationResults[index];
+                                    const isActiveStep = isStepMode && stepIndex === index;
+
                                     return (
-                                        <div key={index} className="command-item">
+                                        <div key={index} className={`command-item ${isActiveStep ? 'active-step' : ''}`}>
                                             <span className="command-number">{index + 1}</span>
                                             <span className="command-code">
                                                 <span className="cmd-fn">{cmd.actionType.toLowerCase()}</span>
-                                                (<span className="cmd-arg">{args}</span>)
+                                                (<span className="cmd-arg">{args}{paramStr}</span>)
                                             </span>
-                                            <button
-                                                className="command-remove"
-                                                onClick={() => removeCommand(index)}
-                                                title="削除"
-                                            >
-                                                ×
-                                            </button>
+                                            {/* Validation warnings */}
+                                            {validation && validation.warnings.length > 0 && phase === 'building' && (
+                                                <span className="command-warning" title={validation.warnings.join('\n')}>
+                                                    ⚠️
+                                                </span>
+                                            )}
+                                            {validation && !validation.valid && phase === 'building' && (
+                                                <span className="command-error" title={validation.errors.join('\n')}>
+                                                    ❌
+                                                </span>
+                                            )}
+                                            {phase === 'building' && (
+                                                <button
+                                                    className="command-remove"
+                                                    onClick={() => removeCommand(index)}
+                                                    title="削除"
+                                                >
+                                                    ×
+                                                </button>
+                                            )}
                                         </div>
                                     );
                                 })}
@@ -329,15 +469,69 @@ export function CookingBoard() {
                         )}
                     </div>
 
-                    {/* Execute Button */}
+                    {/* Step Execution Timeline */}
+                    {isStepMode && executionResult && (
+                        <div className="timeline-viewer">
+                            <h3 style={{
+                                fontSize: 'var(--font-size-sm)',
+                                fontWeight: 700,
+                                color: 'var(--color-text)',
+                                marginBottom: 'var(--space-sm)',
+                            }}>
+                                🔍 ステップ実行中 ({stepIndex + 1} / {executionResult.timeline.length})
+                            </h3>
+                            {executionResult.timeline.map((event, i) => (
+                                <div
+                                    key={i}
+                                    className={`timeline-step ${i === stepIndex ? 'active' : ''} ${i < stepIndex ? 'completed' : ''} ${event.error ? 'error' : ''}`}
+                                >
+                                    <span style={{ fontFamily: 'var(--font-family-mono)', fontSize: 'var(--font-size-sm)' }}>
+                                        <span style={{ color: 'var(--color-code-function)' }}>
+                                            {event.command.actionType.toLowerCase()}
+                                        </span>
+                                        ()
+                                    </span>
+                                    {i === stepIndex && <span style={{ marginLeft: 'auto' }}>◀ いまここ</span>}
+                                    {i < stepIndex && <span style={{ marginLeft: 'auto', color: 'var(--color-success)' }}>✓</span>}
+                                    {event.error && <span style={{ marginLeft: 'auto', color: 'var(--color-error)', fontSize: 'var(--font-size-xs)' }}>{event.error}</span>}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Execute Buttons */}
                     <div className="execute-button-container">
-                        <button
-                            className="execute-button"
-                            onClick={execute}
-                            disabled={commandQueue.length === 0 || phase !== 'building'}
-                        >
-                            ▶ 実行する！
-                        </button>
+                        {isStepMode ? (
+                            <button
+                                className="execute-button"
+                                onClick={executeStep}
+                            >
+                                ▶▶ 次のステップ
+                            </button>
+                        ) : (
+                            <>
+                                <button
+                                    className="execute-button"
+                                    onClick={executeAll}
+                                    disabled={commandQueue.length === 0 || phase !== 'building'}
+                                >
+                                    ▶ 実行する！
+                                </button>
+                                <button
+                                    className="execute-button step-button"
+                                    onClick={startStepExecution}
+                                    disabled={commandQueue.length === 0 || phase !== 'building'}
+                                    style={{
+                                        background: 'var(--color-bg-surface)',
+                                        color: 'var(--color-primary)',
+                                        border: '2px solid var(--color-primary)',
+                                        marginLeft: 'var(--space-md)',
+                                    }}
+                                >
+                                    ▶▶ ステップ実行
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
 
@@ -433,3 +627,4 @@ function BowlArea({
         </div>
     );
 }
+

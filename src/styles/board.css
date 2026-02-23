@@ -383,11 +383,7 @@
 /* ----------------------------------------------------------
    Execute Button
    ---------------------------------------------------------- */
-.execute-button-container {
-    display: flex;
-    justify-content: center;
-    padding: var(--space-sm) 0;
-}
+/* Execute button container is defined later in the file */
 
 .execute-button {
     padding: var(--space-md) var(--space-2xl);
@@ -616,4 +612,69 @@
     .recipe-panel {
         order: -1;
     }
+}
+
+/* ----------------------------------------------------------
+   Star Display (Result Overlay)
+   ---------------------------------------------------------- */
+.star-display {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+}
+
+.star-display .star {
+    font-size: 2.5rem;
+    line-height: 1;
+    display: inline-block;
+}
+
+.star-display .star.empty {
+    font-size: 2.5rem;
+    color: var(--color-text-dim);
+    opacity: 0.3;
+}
+
+/* ----------------------------------------------------------
+   Command Validation Badges
+   ---------------------------------------------------------- */
+.command-warning {
+    font-size: var(--font-size-sm);
+    cursor: help;
+    flex-shrink: 0;
+}
+
+.command-error {
+    font-size: var(--font-size-sm);
+    cursor: help;
+    flex-shrink: 0;
+}
+
+/* Active step highlight (step execution mode) */
+.command-item.active-step {
+    background: var(--color-code-surface);
+    border-left: 3px solid var(--color-primary);
+    padding-left: calc(var(--space-sm) - 3px);
+}
+
+/* ----------------------------------------------------------
+   Execute Button Container (multiple buttons)
+   ---------------------------------------------------------- */
+.execute-button-container {
+    display: flex;
+    justify-content: center;
+    padding: var(--space-sm) 0;
+    gap: var(--space-md);
+}
+
+.step-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.step-button:hover:not(:disabled) {
+    background: var(--color-lavender) !important;
+    transform: translateY(-1px);
 }

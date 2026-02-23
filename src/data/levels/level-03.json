@@ -1,8 +1,10 @@
 {
-    "id": "level-03",
-    "title": "ボウルでまとめて！ミックスサラダ",
-    "description": "食材をボウルに入れてまとめて操作しよう！\nボウルはプログラミングの「配列」と同じ。複数のデータをまとめて処理できるよ。",
-    "learningGoal": "「配列（Array）」 — ボウルに食材をまとめて入れ、バッチ処理する",
+    "id": "level-01-05",
+    "world": 1,
+    "levelInWorld": 5,
+    "title": "1-5: ★ マスターシェフへの道 〜味付きミックスサラダ〜",
+    "description": "ワールド1の総まとめ！食材を切って、ボウルに入れて混ぜて、最後に味付けしよう。\nこれまで学んだ全てのテクニックを使う総合問題だよ！",
+    "learningGoal": "「総合力」 — 切る + 混ぜる(配列) + 味付け(パラメータ付き関数)を組み合わせる",
     "ingredients": [
         {
             "id": "lettuce",
@@ -36,6 +38,25 @@
             "icon": "🥣",
             "slotCount": 0,
             "acceptsBowl": true
+        },
+        {
+            "id": "season-action",
+            "type": "SEASON",
+            "label": "味付け",
+            "icon": "🧂",
+            "slotCount": 1,
+            "acceptsBowl": true,
+            "paramSlots": [
+                {
+                    "name": "seasoning",
+                    "label": "調味料",
+                    "options": [
+                        "ドレッシング",
+                        "塩",
+                        "醤油"
+                    ]
+                }
+            ]
         }
     ],
     "recipe": {
@@ -44,28 +65,40 @@
                 "ingredientName": "レタス",
                 "expected": {
                     "isCut": true,
-                    "isMixed": true
+                    "isMixed": true,
+                    "seasoning": "ドレッシング"
                 }
             },
             {
                 "ingredientName": "トマト",
                 "expected": {
                     "isCut": true,
-                    "isMixed": true
+                    "isMixed": true,
+                    "seasoning": "ドレッシング"
                 }
             },
             {
                 "ingredientName": "きゅうり",
                 "expected": {
                     "isCut": true,
-                    "isMixed": true
+                    "isMixed": true,
+                    "seasoning": "ドレッシング"
                 }
             }
         ]
     },
+    "optimalCommandCount": 5,
+    "bonusConditions": [
+        {
+            "type": "maxCommands",
+            "value": 5
+        }
+    ],
     "hints": [
         "まず全ての野菜を切ろう",
         "切った野菜をボウルにドラッグして入れよう",
-        "ボウルに入れたら「混ぜる」カードを使おう — これが配列のバッチ処理だよ！"
+        "ボウルに入れたら「混ぜる」を使おう — これが配列のバッチ処理！",
+        "最後に「味付け」でドレッシングを選んで完成！",
+        "★★★ヒント: ボウルを活用してコマンド数を最小限にしよう"
     ]
 }

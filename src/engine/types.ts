@@ -55,7 +55,7 @@ export function createIngredient(
 // ----------------------------------------------------------
 // Action (調理操作 = 関数)
 // ----------------------------------------------------------
-export type ActionType = 'CUT' | 'BOIL' | 'FRY' | 'STEAM' | 'MIX' | 'SEASON';
+export type ActionType = 'CUT' | 'BOIL' | 'FRY' | 'STEAM' | 'MIX' | 'SEASON' | 'CALL_RECIPE';
 
 export interface ActionDefinition {
   /** アクションの一意識別子 */
@@ -92,6 +92,10 @@ export interface Command {
   useBowl: boolean;
   /** 追加パラメータ (例: 調味料名) */
   params?: Record<string, string>;
+  /** CALL_RECIPE 用: 展開されるサブコマンド列 */
+  subCommands?: Command[];
+  /** CALL_RECIPE 用: レシピ名 */
+  recipeName?: string;
 }
 
 // ----------------------------------------------------------
@@ -151,6 +155,26 @@ export interface Recipe {
 }
 
 // ----------------------------------------------------------
+// Bonus Conditions (★★★ 判定用)
+// ----------------------------------------------------------
+export type BonusCondition =
+  | { type: 'useBowl' }          // ボウルを使用したか
+  | { type: 'maxCommands'; value: number }  // コマンド数が value 以下か
+  | { type: 'noErrors' };        // エラーなしで実行完了
+
+// ----------------------------------------------------------
+// User-Defined Recipe (関数定義 = ユーザーが作ったレシピカード)
+// ----------------------------------------------------------
+export interface UserRecipe {
+  /** レシピ名 (関数名) */
+  name: string;
+  /** コマンド列 (関数本体) */
+  commands: Command[];
+  /** 説明 */
+  description?: string;
+}
+
+// ----------------------------------------------------------
 // Bowl (ボウル = 配列)
 // ----------------------------------------------------------
 export interface BowlState {
@@ -164,6 +188,10 @@ export interface BowlState {
 export interface LevelData {
   /** レベルID */
   id: LevelId;
+  /** ワールド番号 */
+  world: number;
+  /** ワールド内レベル番号 */
+  levelInWorld: number;
   /** タイトル */
   title: string;
   /** 説明 / ストーリーテキスト */
@@ -180,6 +208,10 @@ export interface LevelData {
   availableActions: ActionDefinition[];
   /** 期待される最終状態（レシピ＝仕様書） */
   recipe: Recipe;
+  /** ★★判定: 最適コマンド数 */
+  optimalCommandCount: number;
+  /** ★★★判定: ボーナス条件 */
+  bonusConditions?: BonusCondition[];
   /** ヒント（任意） */
   hints?: string[];
 }
@@ -202,4 +234,8 @@ export interface GameState {
   executionResult?: ExecutionResult;
   /** クリアしたか */
   isCleared: boolean;
+  /** ステップ実行モード */
+  isStepMode: boolean;
+  /** 現在のステップインデックス (ステップ実行時) */
+  stepIndex: number;
 }

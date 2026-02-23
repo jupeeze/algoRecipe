@@ -1,0 +1,63 @@
+{
+    "id": "level-01-03",
+    "world": 1,
+    "levelInWorld": 3,
+    "title": "1-3: ゆで卵と温ブロッコリー",
+    "description": "新しい関数「茹でる（boil）」を使ってみよう！\nたまごはそのまま茹でるだけ。ブロッコリーは先に切ってから茹でてね。順番が大事！",
+    "learningGoal": "「別の関数」＋「関数の合成」 — 新しい関数(boil)を学び、順序が結果に影響することを理解する",
+    "ingredients": [
+        {
+            "id": "egg",
+            "name": "たまご",
+            "icon": "🥚"
+        },
+        {
+            "id": "broccoli",
+            "name": "ブロッコリー",
+            "icon": "🥦"
+        }
+    ],
+    "availableActions": [
+        {
+            "id": "cut-action",
+            "type": "CUT",
+            "label": "切る",
+            "icon": "🔪",
+            "slotCount": 1,
+            "acceptsBowl": false
+        },
+        {
+            "id": "boil-action",
+            "type": "BOIL",
+            "label": "茹でる",
+            "icon": "♨️",
+            "slotCount": 1,
+            "acceptsBowl": false
+        }
+    ],
+    "recipe": {
+        "conditions": [
+            {
+                "ingredientName": "たまご",
+                "expected": {
+                    "isCooked": true,
+                    "cookMethod": "boiled"
+                }
+            },
+            {
+                "ingredientName": "ブロッコリー",
+                "expected": {
+                    "isCut": true,
+                    "isCooked": true,
+                    "cookMethod": "boiled"
+                }
+            }
+        ]
+    },
+    "optimalCommandCount": 3,
+    "hints": [
+        "たまごは boil(たまご) だけでOK！",
+        "ブロッコリーは cut(ブロッコリー) → boil(ブロッコリー) の順番だよ",
+        "関数の実行順序で結果が変わる — これが「関数の合成」！"
+    ]
+}

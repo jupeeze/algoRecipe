@@ -1,11 +1,21 @@
 {
-  "id": "level-01",
-  "title": "はじめての一品：サラダ",
+  "id": "level-01-01",
+  "world": 1,
+  "levelInWorld": 1,
+  "title": "1-1: はじめてのサラダ",
   "description": "RoboChefへようこそ！まずはシンプルなサラダを作って、基本操作を覚えましょう。\nにんじんとトマトを切って、お皿に盛り付けてください。",
   "learningGoal": "「関数」の基本 — アクションカード（関数）に食材カード（引数）をセットして実行する",
   "ingredients": [
-    { "id": "carrot", "name": "にんじん", "icon": "🥕" },
-    { "id": "tomato", "name": "トマト", "icon": "🍅" }
+    {
+      "id": "carrot",
+      "name": "にんじん",
+      "icon": "🥕"
+    },
+    {
+      "id": "tomato",
+      "name": "トマト",
+      "icon": "🍅"
+    }
   ],
   "availableActions": [
     {
@@ -21,14 +31,19 @@
     "conditions": [
       {
         "ingredientName": "にんじん",
-        "expected": { "isCut": true }
+        "expected": {
+          "isCut": true
+        }
       },
       {
         "ingredientName": "トマト",
-        "expected": { "isCut": true }
+        "expected": {
+          "isCut": true
+        }
       }
     ]
   },
+  "optimalCommandCount": 2,
   "hints": [
     "「切る」カードに食材をドラッグ＆ドロップしてみよう",
     "にんじんとトマト、それぞれに「切る」カードが必要だよ"

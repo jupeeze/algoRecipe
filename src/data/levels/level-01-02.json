@@ -1,0 +1,62 @@
+{
+    "id": "level-01-02",
+    "world": 1,
+    "levelInWorld": 2,
+    "title": "1-2: フルーツ盛り合わせ",
+    "description": "今度はフルーツを盛り合わせよう！\n3つの果物をそれぞれ切ってね。同じ関数を何度も使うのがポイント！",
+    "learningGoal": "「関数の反復」 — 同じ関数（cut）を異なる引数で繰り返し呼び出す",
+    "ingredients": [
+        {
+            "id": "apple",
+            "name": "りんご",
+            "icon": "🍎"
+        },
+        {
+            "id": "banana",
+            "name": "バナナ",
+            "icon": "🍌"
+        },
+        {
+            "id": "orange",
+            "name": "オレンジ",
+            "icon": "🍊"
+        }
+    ],
+    "availableActions": [
+        {
+            "id": "cut-action",
+            "type": "CUT",
+            "label": "切る",
+            "icon": "🔪",
+            "slotCount": 1,
+            "acceptsBowl": false
+        }
+    ],
+    "recipe": {
+        "conditions": [
+            {
+                "ingredientName": "りんご",
+                "expected": {
+                    "isCut": true
+                }
+            },
+            {
+                "ingredientName": "バナナ",
+                "expected": {
+                    "isCut": true
+                }
+            },
+            {
+                "ingredientName": "オレンジ",
+                "expected": {
+                    "isCut": true
+                }
+            }
+        ]
+    },
+    "optimalCommandCount": 3,
+    "hints": [
+        "cut(りんご)、cut(バナナ)、cut(オレンジ) — 3回呼び出そう",
+        "同じ関数でも、引数（食材）を変えると違う結果になるよ"
+    ]
+}

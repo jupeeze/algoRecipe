@@ -79,6 +79,7 @@ const applierMap: Record<ActionType, CommandApplier> = {
     STEAM: applySteam,
     SEASON: applySeason,
     MIX: applyCut, // MIX は applyMix で別処理（下記）
+    CALL_RECIPE: applyCut, // CALL_RECIPE は executor で展開処理
 };
 
 /**
@@ -90,8 +91,8 @@ export function applyAction(
     params?: Record<string, string>,
 ): IngredientState {
     const applier = applierMap[type];
-    if (!applier || type === 'MIX') {
-        return ingredient; // MIXは別ロジック
+    if (!applier || type === 'MIX' || type === 'CALL_RECIPE') {
+        return ingredient; // MIX/CALL_RECIPEは別ロジック
     }
     return applier(ingredient, params);
 }

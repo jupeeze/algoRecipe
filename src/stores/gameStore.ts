@@ -11,6 +11,7 @@ import type {
     IngredientState,
     IngredientId,
     LevelData,
+    LevelId,
 } from '../engine/types';
 import { createIngredient } from '../engine/types';
 import { executeCommands } from '../engine/executor';
@@ -24,6 +25,8 @@ interface GameStore extends GameState {
     levelData: LevelData | null;
     /** 評価結果 */
     evaluationResult: EvaluationResult | null;
+    /** レベルごとのスター記録 */
+    stars: Record<LevelId, number>;
 
     // Actions
     /** レベルをロードして初期状態にセットする */
@@ -38,8 +41,12 @@ interface GameStore extends GameState {
     addToBowl: (ingredientId: IngredientId) => void;
     /** ボウルから食材を取り出す */
     removeFromBowl: (ingredientId: IngredientId) => void;
-    /** コマンドキューを実行する */
-    execute: () => void;
+    /** コマンドキューを一括実行する */
+    executeAll: () => void;
+    /** ステップ実行を開始する */
+    startStepExecution: () => void;
+    /** 次のステップを実行する */
+    executeStep: () => void;
     /** ゲームをリセットする（現在のレベルを最初から） */
     reset: () => void;
 }
@@ -54,6 +61,8 @@ const initialGameState: Omit<GameState, 'levelId'> & { levelId: string } = {
     commandQueue: [],
     phase: 'building',
     isCleared: false,
+    isStepMode: false,
+    stepIndex: -1,
 };
 
 // ----------------------------------------------------------
@@ -63,6 +72,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     ...initialGameState,
     levelData: null,
     evaluationResult: null,
+    stars: {},
 
     loadLevel: (level: LevelData) => {
         const ingredients: IngredientState[] = level.ingredients.map((def) =>
@@ -79,6 +89,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             executionResult: undefined,
             evaluationResult: null,
             isCleared: false,
+            isStepMode: false,
+            stepIndex: -1,
         });
     },
 
@@ -127,22 +139,34 @@ export const useGameStore = create<GameStore>((set, get) => ({
         );
     },
 
-    execute: () => {
+    executeAll: () => {
         const { commandQueue, ingredients, bowl, levelData } = get();
 
         if (!levelData) return;
 
         // Phase: 実行中
-        set({ phase: 'executing' });
+        set({ phase: 'executing', isStepMode: false });
 
         // エンジンでコマンドを実行
         const result = executeCommands(commandQueue, { ingredients, bowl });
 
-        // レシピ判定
+        // レシピ判定（スター評価付き）
         const evaluationResult = evaluateRecipe(
             result.finalState,
             levelData.recipe,
+            commandQueue,
+            levelData.optimalCommandCount,
+            levelData.bonusConditions,
+            result.success,
         );
+
+        // スター記録を更新（ベストのみ保存）
+        const currentStars = get().stars;
+        const prevBest = currentStars[levelData.id] ?? 0;
+        const newStars = {
+            ...currentStars,
+            [levelData.id]: Math.max(prevBest, evaluationResult.stars),
+        };
 
         // 結果を反映
         set({
@@ -151,7 +175,71 @@ export const useGameStore = create<GameStore>((set, get) => ({
             evaluationResult,
             ingredients: result.finalState,
             isCleared: evaluationResult.passed,
+            stars: newStars,
         });
+    },
+
+    startStepExecution: () => {
+        const { commandQueue, ingredients, bowl, levelData } = get();
+
+        if (!levelData || commandQueue.length === 0) return;
+
+        // 全コマンドを実行してタイムラインを生成（表示用）
+        const result = executeCommands(commandQueue, { ingredients, bowl });
+
+        set({
+            phase: 'executing',
+            isStepMode: true,
+            stepIndex: 0,
+            executionResult: result,
+            // ステップモードでは最初のステップの afterState を表示
+            ingredients: result.timeline.length > 0
+                ? result.timeline[0].afterState.map((i) => ({ ...i }))
+                : ingredients,
+        });
+    },
+
+    executeStep: () => {
+        const { stepIndex, executionResult, levelData, commandQueue } = get();
+
+        if (!executionResult || !levelData) return;
+
+        const nextIndex = stepIndex + 1;
+
+        if (nextIndex >= executionResult.timeline.length) {
+            // 全ステップ完了 → 結果判定
+            const evaluationResult = evaluateRecipe(
+                executionResult.finalState,
+                levelData.recipe,
+                commandQueue,
+                levelData.optimalCommandCount,
+                levelData.bonusConditions,
+                executionResult.success,
+            );
+
+            const currentStars = get().stars;
+            const prevBest = currentStars[levelData.id] ?? 0;
+            const newStars = {
+                ...currentStars,
+                [levelData.id]: Math.max(prevBest, evaluationResult.stars),
+            };
+
+            set({
+                phase: 'result',
+                evaluationResult,
+                ingredients: executionResult.finalState,
+                isCleared: evaluationResult.passed,
+                isStepMode: false,
+                stars: newStars,
+            });
+        } else {
+            // 次のステップの結果を表示
+            const nextEvent = executionResult.timeline[nextIndex];
+            set({
+                stepIndex: nextIndex,
+                ingredients: nextEvent.afterState.map((i) => ({ ...i })),
+            });
+        }
     },
 
     reset: () => {

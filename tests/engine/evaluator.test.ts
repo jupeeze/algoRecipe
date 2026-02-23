@@ -4,8 +4,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { createIngredient } from '../../src/engine/types';
-import type { Recipe, IngredientState } from '../../src/engine/types';
-import { evaluateRecipe, matchCondition } from '../../src/engine/evaluator';
+import type { Recipe, IngredientState, Command, BonusCondition } from '../../src/engine/types';
+import { evaluateRecipe, matchCondition, evaluateStars, checkBonusCondition } from '../../src/engine/evaluator';
 
 describe('matchCondition', () => {
     it('切られた食材が期待通りならマッチする', () => {
@@ -131,4 +131,104 @@ describe('evaluateRecipe', () => {
         expect(result.passed).toBe(false);
         expect(result.score.passed).toBe(0);
     });
+
+    it('クリア時にスター評価が計算される', () => {
+        const ingredients: IngredientState[] = [
+            { ...createIngredient('carrot', 'にんじん', '🥕'), isCut: true },
+            { ...createIngredient('tomato', 'トマト', '🍅'), isCut: true },
+        ];
+
+        const commands: Command[] = [
+            { actionType: 'CUT', targetIds: ['carrot'], useBowl: false },
+            { actionType: 'CUT', targetIds: ['tomato'], useBowl: false },
+        ];
+
+        const result = evaluateRecipe(ingredients, recipe, commands, 2);
+
+        expect(result.passed).toBe(true);
+        expect(result.stars).toBe(2); // 最適コマンド数ちょうど → ★★
+    });
+
+    it('未クリア時はスター0', () => {
+        const ingredients: IngredientState[] = [
+            createIngredient('carrot', 'にんじん', '🥕'),
+            createIngredient('tomato', 'トマト', '🍅'),
+        ];
+
+        const result = evaluateRecipe(ingredients, recipe);
+
+        expect(result.stars).toBe(0);
+    });
 });
+
+describe('evaluateStars', () => {
+    const commands: Command[] = [
+        { actionType: 'CUT', targetIds: ['carrot'], useBowl: false },
+        { actionType: 'CUT', targetIds: ['tomato'], useBowl: false },
+    ];
+
+    it('未クリアは★0', () => {
+        expect(evaluateStars(false, 2, 2, undefined, commands, true)).toBe(0);
+    });
+
+    it('クリアだがコマンド過多は★1', () => {
+        const manyCommands: Command[] = [...commands, ...commands];
+        expect(evaluateStars(true, 4, 2, undefined, manyCommands, true)).toBe(1);
+    });
+
+    it('最適コマンド数以内でボーナスなしは★2', () => {
+        expect(evaluateStars(true, 2, 2, undefined, commands, true)).toBe(2);
+    });
+
+    it('最適コマンド数以内でボーナス条件もクリアは★3', () => {
+        const bonusConditions: BonusCondition[] = [{ type: 'noErrors' }];
+        expect(evaluateStars(true, 2, 2, bonusConditions, commands, true)).toBe(3);
+    });
+
+    it('最適だがボーナス条件未達は★2', () => {
+        const bonusConditions: BonusCondition[] = [{ type: 'useBowl' }];
+        expect(evaluateStars(true, 2, 2, bonusConditions, commands, true)).toBe(2);
+    });
+});
+
+describe('checkBonusCondition', () => {
+    it('useBowl: ボウル使用コマンドあり → true', () => {
+        const commands: Command[] = [
+            { actionType: 'FRY', targetIds: [], useBowl: true },
+        ];
+        expect(checkBonusCondition({ type: 'useBowl' }, commands, true)).toBe(true);
+    });
+
+    it('useBowl: ボウル未使用 → false', () => {
+        const commands: Command[] = [
+            { actionType: 'CUT', targetIds: ['carrot'], useBowl: false },
+        ];
+        expect(checkBonusCondition({ type: 'useBowl' }, commands, true)).toBe(false);
+    });
+
+    it('maxCommands: コマンド数以内 → true', () => {
+        const commands: Command[] = [
+            { actionType: 'CUT', targetIds: ['carrot'], useBowl: false },
+        ];
+        expect(checkBonusCondition({ type: 'maxCommands', value: 3 }, commands, true)).toBe(true);
+    });
+
+    it('maxCommands: コマンド数超過 → false', () => {
+        const commands: Command[] = [
+            { actionType: 'CUT', targetIds: ['carrot'], useBowl: false },
+            { actionType: 'CUT', targetIds: ['tomato'], useBowl: false },
+            { actionType: 'FRY', targetIds: ['carrot'], useBowl: false },
+            { actionType: 'FRY', targetIds: ['tomato'], useBowl: false },
+        ];
+        expect(checkBonusCondition({ type: 'maxCommands', value: 3 }, commands, true)).toBe(false);
+    });
+
+    it('noErrors: 実行成功 → true', () => {
+        expect(checkBonusCondition({ type: 'noErrors' }, [], true)).toBe(true);
+    });
+
+    it('noErrors: 実行失敗 → false', () => {
+        expect(checkBonusCondition({ type: 'noErrors' }, [], false)).toBe(false);
+    });
+});
+
