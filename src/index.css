@@ -3,6 +3,8 @@
    ミニマルレイアウト × パステルカラー × コード表示要素
    ============================================================ */
 
+@import url('@/lib/css/index.css');
+
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap');
 
 /* ----------------------------------------------------------

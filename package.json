@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "add": "liftkit add"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -20,6 +21,7 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@chainlift/liftkit": "^0.2.0",
     "@eslint/js": "^9.39.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
